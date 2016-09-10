@@ -1,0 +1,6 @@
+##############
+# .gitignore #
+##############
+
+#--because I do this frequently: git status > file.rpt----
+file.rpt
