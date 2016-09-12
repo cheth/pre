@@ -13,7 +13,24 @@ The preprocessor _pre_ is a general-purpose tool optimized for the the productio
 * Simple syntax; easy to use
 
 # Syntax
+ ##  &lt;comment&gt;
+
+ #define &lt;key&gt; &lt;value&gt;
+ #define &lt;key&gt; &lt;&lt;
+ #enddef
+
+ #eval
+
+ #if &lt;conditional clause&gt;
+ #else
+ #endif
+
  #include &lt;filename&gt;
+
+ #mysqlopen &lt;credentials&gt;
+ #select &lt;sql&gt;
+ #select-one &lt;sql&gt;
+ #endselect
 
 # pre History
 
