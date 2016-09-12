@@ -13,8 +13,8 @@ The preprocessor _pre_ is a general-purpose tool optimized for the the productio
 * Simple syntax; easy to use
 
 # Syntax
- #include <filename>
- 
+ #include &lt;filename&gt;
+
 # pre History
 
 The first version of _pre_ was created circa 1990 as an object code patch to Borland's Turbo "C" preprocessor. The patch changed the output filename extension to facilitate development of Clipper (a dBase compiler) applications. Much of the underlying philosophy of preprocessors can be traced back to "C."
