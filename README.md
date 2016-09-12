@@ -6,13 +6,14 @@ HTML(+) preprocessor
 The preprocessor _pre_ is a general-purpose tool optimized for the the production of web-ready HTML. It produces static web pages--that are often fully database-driven.
 
 # Features
-* Very fast web pages
+* Very fast web page delivery
 * Highly secure
 * MySQL integration for "dynamic" content
 * Command line and CMS interfaces
 * Simple syntax; easy to use
 
 # Syntax
+```
  ##  &lt;comment&gt;
 
  #define &lt;key&gt; &lt;value&gt;
@@ -30,6 +31,7 @@ The preprocessor _pre_ is a general-purpose tool optimized for the the productio
  #endif
 
  #include &lt;filename&gt;
+ #include <filename>
 
  #mysqlopen &lt;credentials&gt;
  
@@ -38,6 +40,7 @@ The preprocessor _pre_ is a general-purpose tool optimized for the the productio
  #select-one &lt;sql&gt;
  
  #endselect
+```
 
 # pre History
 
