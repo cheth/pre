@@ -2,29 +2,8 @@
 /**************************
 * private/models/pre.class.php
 *--------------------------
-* (HTML) preprocessing
+* HTML(+) preprocessor
 * -------------------------
-* Syntax for preprocess candidate file
-* ## <comment>
-*
-* #define <label> <value>
-* #define <label> <<
-* #enddef
-*
-* #eval
-*
-* #if <if clause>
-* #else
-* #endif
-*
-* #include <filename>
-*
-* #mysqlopen <credentials>
-* #select <sql>
-* #select-one <sql>
-* #endselect
-*
-*--------------------------
 * 1.1.17 (cheth) 2016-Jun-20 convert to class
 * 1.1.18 (cheth) 2016-Sep-10 publish as public project on GitHub
 **************************/
@@ -78,12 +57,10 @@ class Preprocess_Helper
     public function preprocess($preArgs, $preVerbose=FALSE) {
 
         $preVirtual = FALSE;
-        //$predefined = "";
-
+ 
         //--command line calls automatically filled with pre.php-------
         if (substr($preArgs[0],-7) === "pre.php") { // ignore directory part of filename
             array_shift($preArgs);
-            //if (!isset($preVerbose)) {$preVerbose = "on";};
         };
 
         //--command line calls can ask for "quiet"-------
@@ -97,9 +74,6 @@ class Preprocess_Helper
             array_shift($preArgs);
             $preVirtual = TRUE;
             while (count($preArgs) > 1) {
-                #echo "preArgs[1]=$preArgs[1]...<br>\n";
-                #echo "preArgs[2]=$preArgs[2]...<br>\n";
-                //$predefined["$preArgs[1]"] = "$preArgs[2]";
                 array_splice($preArgs,1,2);
             };
         };
@@ -108,7 +82,6 @@ class Preprocess_Helper
         if ($preVerbose) {
             echo "pre.php - HTML preprocessor v$this->version\n";
             echo "Copyright (C) 1997-" . date("Y") . " Cheth Rowe Consulting. All rights reserved.\n";
-            #echo "preprocessing $preArgs[0]\n";
         };
 
         if (count($preArgs) < 1) {
@@ -133,26 +106,21 @@ class Preprocess_Helper
             $preWildcard = $info['filename'] . '.' . $info['extension'];
 
             $getcwd = getcwd();
-            //echo "\n-->preFilename=$preFilename... preWilddir=$preWilddir... preWildcard=$preWildcard... getcwd=$getcwd...\n";
 
             $preCurDir = getcwd();
             $preCurDir = preg_replace("/.*:/", "", $preCurDir);  ## remove drive reference
             if ($preStartDir <> $preCurDir) {
-                //echo "before preCurDir=$preCurDir... preStartDir=$preStartDir...<br>\n";
                 if (file_exists($preStartDir)) { // should probably generate error
                     chdir($preStartDir);
                 } else {
                     $this->error_found = TRUE;
                     $this->error_text = "can't open directory: $preStartDir";    
                 }    
-                //$preCurDir = getcwd();
-                #echo "middle  preCurDir=$preCurDir... preStartDir=$preStartDir...<br>\n";
             };
 
             if ($preWilddir == "") { ## default is current dir
                 $preWilddir = ".";     ## dot is current directory
             } else {              ## request to change directory
-                //echo "before chdir, preCurDir=$preCurDir... preWilddir=$preWilddir... preFilename=$preFilename...<br>\n";
                 if (file_exists($preWilddir)) { // should probably generate error
                     chdir("$preWilddir");
                 } else {
@@ -162,22 +130,17 @@ class Preprocess_Helper
             };
 
             $preCurDir = getcwd();
-            //echo "after  preCurDir=$preCurDir... preStartDir=$preStartDir...<br>\n";
 
             if (!$preDirHandle = opendir (".")) {
-                echo "\nE001 Can't open current directory";
+                echo "\nE001 Can't open current directory\n";
             };
             $preAllFiles = array();
             while (false !== ($preFile = readdir($preDirHandle))) {
-               #echo "\nPushing preFile=$preFile...";
           	   array_push ($preAllFiles,$preFile);
       	    };
 
-            #$preAllFiles = readdir ($preDirHandle);
-            #&dieNow ("wilddir=$wilddir... wildcard=$wildcard... allfiles=@allfiles...");
             closedir ($preDirHandle);
 
-            #echo "\npreAllFiles=$preAllFiles... element0=$preAllFiles[0]...element1=$preAllFiles[1]...";
 
             //--command line error reporting----------------- 
             if ($this->error_found && !$preVirtual) {
@@ -186,31 +149,14 @@ class Preprocess_Helper
 
             //--process each filename (after any wildcard expansion)----------------- 
             if (!$this->error_text) foreach ($preAllFiles as $preInputFilename){
-                //echo "<br>\npreWildcard=$preWildcard... preInputFilename=$preInputFilename...<br>\n";
-                //if (!preg_match ("/^$preWildcard/i", "$preInputFilename") ) {continue;};
                 if (!fnmatch ($preWildcard, $preInputFilename) ) {
                     continue;
                 }
-                #if (isset($this->defines)) {
-                    #unset($GLOBALS['defines']);
-                #};
-                #unset ($this->defines);
-                #global $this->defines;
                 $this->defines = array();
-                #array_splice($this->defines,0);
-                #$myvirtual="";
-                #echo "\npreInputFilename=$preInputFilename...";
                 $preOutput_filename = preg_replace("/\.pre/", $this->extension, $preInputFilename);
                 if ($preVerbose) {
                     echo "\nOutput file name=$preOutput_filename<br>\n";
-                    #print_r ($this->defines);
-                    #echo "<br><br>\n";
                 };
-                //if ($preVirtual) {
-                    //if($predefined) foreach($predefined as $key => $value) {
-                    //    $this->defines["$key"] = "$value";
-                    //};
-                //};
 
                 //--preprocess file--------------- 
                 $preOutput_html = ''; // start fresh for each new file
@@ -258,12 +204,8 @@ class Preprocess_Helper
         $prelibBypass = "";
 
         if (!is_array($xxPreFilename)) {
-            //$xxPreFilename = stripslashes($xxPreFilename);
             $xxPreFilename = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, $xxPreFilename);
             if (!file_exists($xxPreFilename)) {
-                //$preCurDir = getcwd();
-                //echo "file not found: preCurDir=$preCurDir...xxPreFilename=$xxPreFilename...<br>\n";
-                #print_r ($this->defines);
                 $this->error_found = TRUE;
                 $this->error_text .= "Requested input file, \"$xxPreFilename,\" at line $preLineCnt, does not exist.\n";
                 return(FALSE);
@@ -277,10 +219,6 @@ class Preprocess_Helper
         };
 
         if (!is_array($xxPreFilename)) {
-            //if(!file_exists($xxPreFilename))
-            //{
-            //    die("Fatal Error P410: Preprocessor input file '$xxPreFilename' does not exist.");
-            //};
             $preHandle = fopen ($xxPreFilename, "r");
         };
 
@@ -360,13 +298,11 @@ class Preprocess_Helper
                 $preLoopSuck = false;
                 $preLoopBlow = true;
                 $preLoopSize = $preLoopIndex;
-                //echo("encountered endselect\n");
                 continue;
             };
 
             //--database loop increment---------- 
             if ($preLoopSuck) {
-                //echo "in preLoopSuck at $preLoopIndex... line=$line...<br>";
                 $preLoop[$preLoopIndex] = $line;
                 $preLoopIndex++;
                 continue;
@@ -377,18 +313,15 @@ class Preprocess_Helper
             *********/ 
             if ($prefix == "#endif") {  ## ENDIF
                 $prelibBypass = 0;
-                #echo "#endif encountered suck=$preLoopSuck... blow=$preLoopBlow... index=$preLoopIndex... line=$line...<br>\n";
                 continue;
             };
 
             if ($prefix == "#else" && $prelibBypass == 0) {  ## ELSE
-                #echo "#else encountered suck=$preLoopSuck... blow=$preLoopBlow... index=$preLoopIndex... bypass=$prelibBypass...line=$line...<br>\n";
                 $prelibBypass = 1;
                 continue;
             };
 
             if ($prefix == "#else" && $prelibBypass == 1) {  ## ELSE
-                #echo "#else encountered suck=$preLoopSuck... blow=$preLoopBlow... index=$preLoopIndex... bypass=$prelibBypass...line=$line...<br>\n";
                 $prelibBypass = 0;
                 continue;
             }
@@ -404,7 +337,6 @@ class Preprocess_Helper
             if ($prefix <> "#define" && $prefix <> "#undef" && isset($this->defines) > 0) {
                 foreach ($this->defines as $arg => $ans) {
                     $line = preg_replace("/$arg/",$ans,$line);
-                    //echo "line=$line... arg=$arg... ans=$ans...<br>\n";
                 };
             };
 
@@ -417,15 +349,12 @@ class Preprocess_Helper
                      $preMultilineVerb = 'select';
                      $preMultilineArg = '';
                      $preMultilineAns = 'SELECT ';
-                     //echo("initiated multiline select\n");
                      continue;
                 };
                 $query = substr($line,1,strlen($line)-1); // everything except the initial pound sign
                 $query = trim($query);
 
                 $result = $this->db->query($query); // execute PDO query
-                //echo "result=$result...\n";
-                #$this->getRowAsDefines(); // load first row
                 $preLoopSuck = true;
                 continue;
             };
@@ -439,7 +368,6 @@ class Preprocess_Helper
                      $preMultilineVerb = 'select-one';
                      $preMultilineArg = '';
                      $preMultilineAns = 'SELECT ';
-                     //echo("initiated multiline select-one\n");
                      continue;
                 };
                 $query = substr($line,1,strlen($line)-1); // everything except the initial pound sign
@@ -448,8 +376,6 @@ class Preprocess_Helper
 
                 $result = $this->db->query($query); // execute PDO query
                 $this->getRowAsDefines(); // load first row
-                //echo "processed one-row-only...\n";
-                #$this->getRowAsDefines(); // load first row
                 continue;
             };
 
@@ -458,15 +384,11 @@ class Preprocess_Helper
             ***********/
             if ($prefix == "#include"){  ## INCLUDE
                 $exploded = explode(" ", trim($line));
-                //echo("inclusion underway\n");
-                //echo("explosion count=" . count($exploded) . "\n");
-                //print_r($exploded);
                 if (count($exploded) == 2) {
                     $op = $exploded[0];
                     $ans= $exploded[1];
                     $ans = trim($ans);
                     $ans = preg_replace("/[<>]/","",$ans);
-                    //echo("include=$ans\n");
                     $this->process_file($ans,$preOutput_html,0); // recursive call
                 };
                 continue;
@@ -483,7 +405,6 @@ class Preprocess_Helper
                     $replaceable = "";
                     if (count($exploded) == 2) {
                         $this->defines["$origarg"] = "$replaceable";
-                        //echo "count=2:preLineCnt=$preLineCnt... exploded=$exploded... op=$op... origarg=$origarg... replaceable=$replaceable...<br>\n";
                     };
                     if (count($exploded) > 2) {
                         $replaceable = trim($exploded[2]);
@@ -491,20 +412,16 @@ class Preprocess_Helper
                              $preMultilineVerb = "define";
                              $preMultilineAns = "";
                              $preMultilineArg = $origarg;
-                             #echo "#defines start: preMultilineArg=$preMultilineArg...\n";
                              continue;
                         };
                         foreach ($this->defines as $arg => $ans) {
                             $replaceable = preg_replace("/$arg/","$ans",$replaceable);
                             $replaceable = trim($replaceable); 
-                            #$line = "$op$origarg$replaceable"; 
-                            //echo "count>2:preLineCnt=$preLineCnt... line=$line... op=$op...  origarg=$origarg... replaceable=$replaceable...<br>\n";
                         };
                         $this->defines["$origarg"] = "$replaceable";
                     };
                 };
                 $count = count($exploded);
-                //echo "ct=$count...  preLineCnt=$preLineCnt... exploded=$exploded... op=$op...  origarg=$origarg... replaceable=$replaceable...<br>\n";
                 continue;
             };
 
@@ -523,7 +440,6 @@ class Preprocess_Helper
                     };
                     $ans = trim($ans);
                     $this->defines["$arg"] = "$ans";
-                    //echo "preLineCnt=$preLineCnt... exploded=$exploded... op=$op... arg=$arg... ans=$ans...<br>\n";
                 };
                 continue;
             };
@@ -532,7 +448,6 @@ class Preprocess_Helper
             * #enddef *
             **********/
             if ($prefix == "#enddef") { ## end of multi-line define
-                #echo "multi-line: preMultilineArg=$preMultilineArg... preMultilineAns=$preMultilineAns...";
                 $this->defines["$preMultilineArg"] = "$preMultilineAns";
                 $preMultilineVerb = "";
                 $preMultilineAns = "";
@@ -555,7 +470,6 @@ class Preprocess_Helper
                 $preMultilineVerb = '';
                 $preMultilineAns = '';
                 $preMultilineArg = '';
-                //echo("processed double <<\n");
                 continue;
             };
 
@@ -564,7 +478,6 @@ class Preprocess_Helper
             *******************/
             if ($preMultilineVerb) {  ## add to multi-line define
                 $preMultilineAns .= $line;
-                //echo("added during $preMultilineVerb\n");
                 continue;
             };
 
@@ -624,7 +537,6 @@ class Preprocess_Helper
             if ($prefix == "#mysqlopen") {  ## MYSQLOPEN
                 $pattern = '|(.*?)=(.*?)\s|';
                 $count = preg_match_all($pattern, substr($line,11), $matches);
-                //print_r($matches);
                 $credentials = array();
                 if ($count) for ($i=0;$i<$count;$i++){
                     $key = $matches[1][$i];
@@ -650,11 +562,9 @@ class Preprocess_Helper
                 $evalstring = preg_replace("/\"/","'",$evalstring);
                 $evalstring = preg_replace("/eq/","==",$evalstring);
                 $evalstring = preg_replace("/ne/","<>",$evalstring);
-                #$evalstring="return(3==4);";
                 if ($evalstring=="") {$evalstring=0;};
                 $evalstring = "return($evalstring);";
                 if (eval("$evalstring")) {$prelibBypass = 0;} else {$prelibBypass = 1;};
-                //echo "line=$line... prelibBypass=$prelibBypass... evalstring=$evalstring...<br>\n";
                 continue;
             };
 
@@ -675,10 +585,11 @@ class Preprocess_Helper
             * #eval *
             ********/
             if ($prefix == "#eval") {  ## EVAL (dangerous inline evaluation)
-                $exploded = explode(" ", $line, 2);
-                $evalstring = $exploded[1];
+                $exploded = explode(" ", $line, 3);
+                $evalkey = $exploded[1];
+                $evalstring = $exploded[2];
                 $evalresult = eval("\$evaluated=$evalstring;; return(\$evaluated);");
-                $this->defines["EVALRESULT"] = "$evalresult";
+                $this->defines[$evalkey] = "$evalresult";
                 continue;
             };
 
@@ -686,10 +597,7 @@ class Preprocess_Helper
             /*****************
             * ordinary lines *
             *****************/
-            #if (!is_array($xxPreFilename)) {
-                #echo "line=$line<br>\n";
-                $preOutput_html .= $line;
-            #};
+            $preOutput_html .= $line;
 
         }
 
@@ -722,7 +630,6 @@ class Preprocess_Helper
     * returns: <Boolean> TRUE if successful, FALSE if no more rows
     ***********************************************/
     private function selectSingleRow($sql) {
-        //echo("selecting single row\n");
         $query = str_replace('select-one', 'select', $sql);
         $query = str_replace('>>', '', $query); // multi-line sql statements
         $query = trim($query);
@@ -750,7 +657,6 @@ class Preprocess_Helper
         foreach($row as $key => $val) {
             $this->defines[$key] = $val;
         }
-        //echo("inside getRowAsDefines()\n");
         return (TRUE);
     }    
 
