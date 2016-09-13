@@ -13,6 +13,7 @@
 
 //--find myself-----
 $include_path = dirname(__FILE__) . DIRECTORY_SEPARATOR; // trailing slash
+echo("include_path=$include_path<br />");
 
 //--initialize preprocessor class-----
 require_once ($include_path . 'pre.class.php');

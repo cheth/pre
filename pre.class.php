@@ -36,8 +36,10 @@ class Preprocess_Helper
     * private vars *
     ***************/
     private $version = "1.1.18";  // prelib version displayed on verbose runs
-    private $db; // stores database connection
+    private $db; // database connection
     private $defines; // array of #define(s)
+    private $extension = '.html'; // default; leading "dot" required
+    private $cool; // prettification (coolness) connection
     
     /***************
     * public vars *
@@ -198,7 +200,7 @@ class Preprocess_Helper
                 #array_splice($this->defines,0);
                 #$myvirtual="";
                 #echo "\npreInputFilename=$preInputFilename...";
-                $preOutput_filename = preg_replace("/\.pre/", ".html", $preInputFilename);
+                $preOutput_filename = preg_replace("/\.pre/", $this->extension, $preInputFilename);
                 if ($preVerbose) {
                     echo "\nOutput file name=$preOutput_filename<br>\n";
                     #print_r ($this->defines);
@@ -211,7 +213,7 @@ class Preprocess_Helper
                 //};
 
                 //--preprocess file--------------- 
-                //$preOutput_html = "";
+                $preOutput_html = ''; // start fresh for each new file
                 $preOutput_html = $this->process_file($preInputFilename,$preOutput_html,1);
                 if (!$preVirtual) {
                     $this->preWriteHTML($preOutput_filename, $preOutput_html);
@@ -288,6 +290,7 @@ class Preprocess_Helper
         $preLoopSize = 0;
         $preMultilineArg = "";
         $preMultilineAns = "";
+        $preMultilineVerb = '';
 
         while (1==1) {
             if (is_array($xxPreFilename)) {
@@ -409,14 +412,14 @@ class Preprocess_Helper
             * #select *
             **********/
             if ($prefix == "#select"){  ## SELECT
-                //if (!isset($link)) {  ## first time switch
-                //    if (!isset($mysqlopen_location)) {
-                //        $mysqlopen_location = "../lib/mysql_open.php";
-                //    };
-                //    #echo "mysqlopen_location=$mysqlopen_location...<br>\n";
-                //    include $mysqlopen_location;  ## open database
-                //    #echo "link=$link...";
-                //};
+                $argument = trim(substr($line, 7));
+                if ($argument === '>>') {    ## multi-line sql coming
+                     $preMultilineVerb = 'select';
+                     $preMultilineArg = '';
+                     $preMultilineAns = 'SELECT ';
+                     //echo("initiated multiline select\n");
+                     continue;
+                };
                 $query = substr($line,1,strlen($line)-1); // everything except the initial pound sign
                 $query = trim($query);
 
@@ -427,18 +430,18 @@ class Preprocess_Helper
                 continue;
             };
 
-            /**********
-            * #selectone *
-            **********/
+            /**************
+            * #select-one *
+            **************/
             if ($prefix == "#select-one"){  ## SELECT ONE ROW ONLY
-                //if (!isset($link)) {  ## first time switch
-                //    if (!isset($mysqlopen_location)) {
-                //        $mysqlopen_location = "../lib/mysql_open.php";
-                //    };
-                //    #echo "mysqlopen_location=$mysqlopen_location...<br>\n";
-                //    include $mysqlopen_location;  ## open database
-                //    #echo "link=$link...";
-                //};
+                $argument = trim(substr($line, 11));
+                if ($argument === '>>') {    ## multi-line sql coming
+                     $preMultilineVerb = 'select-one';
+                     $preMultilineArg = '';
+                     $preMultilineAns = 'SELECT ';
+                     //echo("initiated multiline select-one\n");
+                     continue;
+                };
                 $query = substr($line,1,strlen($line)-1); // everything except the initial pound sign
                 $query = str_replace('select-one', 'select', $query);
                 $query = trim($query);
@@ -463,6 +466,7 @@ class Preprocess_Helper
                     $ans= $exploded[1];
                     $ans = trim($ans);
                     $ans = preg_replace("/[<>]/","",$ans);
+                    //echo("include=$ans\n");
                     $this->process_file($ans,$preOutput_html,0); // recursive call
                 };
                 continue;
@@ -483,7 +487,8 @@ class Preprocess_Helper
                     };
                     if (count($exploded) > 2) {
                         $replaceable = trim($exploded[2]);
-                        if ($replaceable == '<<') {    ## multi-line define
+                        if ($replaceable == '>>') {    ## multi-line define
+                             $preMultilineVerb = "define";
                              $preMultilineAns = "";
                              $preMultilineArg = $origarg;
                              #echo "#defines start: preMultilineArg=$preMultilineArg...\n";
@@ -529,13 +534,87 @@ class Preprocess_Helper
             if ($prefix == "#enddef") { ## end of multi-line define
                 #echo "multi-line: preMultilineArg=$preMultilineArg... preMultilineAns=$preMultilineAns...";
                 $this->defines["$preMultilineArg"] = "$preMultilineAns";
+                $preMultilineVerb = "";
                 $preMultilineAns = "";
                 $preMultilineArg = "";
                 continue;
             };
 
-            if ($preMultilineArg <> "") {  ## add to multi-line define
+            /*****
+            * << *
+            *****/
+            if (trim($line) == '<<' && $preMultilineVerb) { ## end of multi-line command
+                if ($preMultilineVerb === 'define') {
+                    $this->defines["$preMultilineArg"] = "$preMultilineAns";
+                } elseif ($preMultilineVerb === 'select') {
+                    $result = $this->db->query($preMultilineAns); // execute PDO query
+                    $preLoopSuck = true;
+                } elseif ($preMultilineVerb === 'select-one') {
+                    $this->selectSingleRow($preMultilineAns);
+                }    
+                $preMultilineVerb = '';
+                $preMultilineAns = '';
+                $preMultilineArg = '';
+                //echo("processed double <<\n");
+                continue;
+            };
+
+            /*******************
+            * multi-line verbs *
+            *******************/
+            if ($preMultilineVerb) {  ## add to multi-line define
                 $preMultilineAns .= $line;
+                //echo("added during $preMultilineVerb\n");
+                continue;
+            };
+
+            /*************
+            * #coolclass *
+            *************/
+            if ($prefix == "#coolclass") {  ## COOLCLASS
+                $exploded = explode(" ", $line, 3);
+                if (count($exploded) === 3) {
+                    $class_filename = $exploded[1];
+                    $class_classname = $exploded[2];
+                };
+                if (count($exploded) !== 3) {
+                    $this->error_found = TRUE;
+                    $this->error_text = '#coolclass requires two arguments\n';
+                }
+                if(!$this->error_found) {
+                    if (!$file_exists($class_filename)) {
+                        $this->error_found = TRUE;
+                        $this->error_text = '#coolclass not found\n';
+                    } else {
+                        require_once ($class_filename);
+                        $this->cool = new $class_classname;
+                    }
+                }
+               
+                continue;
+            };
+
+            /*************
+            * #extension *
+            *************/
+            if ($prefix == "#extension") {  ## EXTENSION
+                $exploded = explode(" ", $line, 2);
+                if (count($exploded) === 2) {
+                    $arg = $exploded[1];
+                    $arg = trim($arg);
+                };
+                if (substr($arg,0,1) !== '.'){
+                    $this->error_found = TRUE;
+                    $this->error_text = '#extension must begin with "dot"\n';
+                }    
+                if (count($exploded) !== 2) {
+                    $this->error_found = TRUE;
+                    $this->error_text = '#extension requires one argument\n';
+                }
+                if(!$this->error_found && $arg) {
+                    $this_extension = $arg;
+                }
+               
                 continue;
             };
 
@@ -625,10 +704,33 @@ class Preprocess_Helper
             exit;
         };
 
+        //--strip any leading whitespace--------
+        $preOutput_html = ltrim($preOutput_html);
+
         //--return preprocessed file--------
         return ($preOutput_html);
 
     }
+
+    /**********************************************
+    * function: selectSingleRow()
+    *------------------
+    * Purpose: retrieve single row
+    *------------------
+    * params: sql
+    *------------------
+    * returns: <Boolean> TRUE if successful, FALSE if no more rows
+    ***********************************************/
+    private function selectSingleRow($sql) {
+        //echo("selecting single row\n");
+        $query = str_replace('select-one', 'select', $sql);
+        $query = str_replace('>>', '', $query); // multi-line sql statements
+        $query = trim($query);
+
+        $result = $this->db->query($query); // execute PDO query
+        $this->getRowAsDefines(); // load first row into defines array
+        return (TRUE);
+    }    
 
     /**********************************************
     * function: getRowAsDefines()
@@ -648,7 +750,7 @@ class Preprocess_Helper
         foreach($row as $key => $val) {
             $this->defines[$key] = $val;
         }
-
+        //echo("inside getRowAsDefines()\n");
         return (TRUE);
     }    
 
