@@ -30,10 +30,6 @@ All lines are pass-thru, unless the first character is a pound sign (#) followed
 #include <filename>
 
 #mysqlopen <credentials>
-#select <sql>
-  <unlimited lines processed for each selected row>
-#endselect
-
 #select >>
   <multi-line sql>
 <<
