@@ -4,3 +4,6 @@
 
 #--because I do this frequently: git status > file.rpt----
 file.rpt
+
+#--test files not part of public repo-------------
+test
