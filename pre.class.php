@@ -98,12 +98,18 @@ class Preprocess_Helper
         $preOutput_html = ""; // will contain preprocessing result
         $preAllFiles = array(); // filenames after wildcard expansion
 
+        $preWilddir = '';
+        $preWildcard = '';
+
         //--process command line file list--------------
         foreach ($preArgs as $preFilename)
         {
             $info = pathinfo($preFilename);
             $preWilddir = $info['dirname'];
-            $preWildcard = $info['filename'] . '.' . $info['extension'];
+            $preWildcard = $info['filename'];
+            if (isset($info['extension']) && $info['extension']) { // might have forgot extension?
+                $preWildcard = $info['filename'] . '.' . $info['extension'];
+            };    
 
             $getcwd = getcwd();
 
@@ -171,7 +177,15 @@ class Preprocess_Helper
 
         //--closing process----------------
         if ($preVerbose) {
-            echo "\n";
+            $prettyText = '';
+            if ($preCount == 0) {
+                $prettyText = 'Warning: no files';
+            } elseif ($preCount == 1) {
+                $prettyText = 'one file';
+            } else {
+                $prettyText = $preCount . ' files';
+            }      
+            echo("$prettyText processed.\n");
         };
 
         if ($preVirtual) {
@@ -330,9 +344,9 @@ class Preprocess_Helper
                 continue;
             }
 
-            /**********
-            * #define *
-            **********/
+            /*****************
+            * expand defines *
+            *****************/
             //--replace all #defined elements within source line----------------
             if ($prefix <> "#define" && $prefix <> "#undef" && isset($this->defines) > 0) {
                 foreach ($this->defines as $arg => $ans) {
@@ -345,7 +359,7 @@ class Preprocess_Helper
             **********/
             if ($prefix == "#select"){  ## SELECT
                 $argument = trim(substr($line, 7));
-                if ($argument === '>>') {    ## multi-line sql coming
+                if ($argument === '<<') {    ## multi-line sql coming
                      $preMultilineVerb = 'select';
                      $preMultilineArg = '';
                      $preMultilineAns = 'SELECT ';
@@ -364,7 +378,7 @@ class Preprocess_Helper
             **************/
             if ($prefix == "#select-one"){  ## SELECT ONE ROW ONLY
                 $argument = trim(substr($line, 11));
-                if ($argument === '>>') {    ## multi-line sql coming
+                if ($argument === '<<') {    ## multi-line sql coming
                      $preMultilineVerb = 'select-one';
                      $preMultilineArg = '';
                      $preMultilineAns = 'SELECT ';
@@ -391,6 +405,19 @@ class Preprocess_Helper
                     $ans = preg_replace("/[<>]/","",$ans);
                     $this->process_file($ans,$preOutput_html,0); // recursive call
                 };
+                if (count($exploded) == 4) { #include <filename> AS <key>
+                    $op = $exploded[0];
+                    $ans= $exploded[1];
+                    $as = $exploded[2];
+                    $key= $exploded[3];
+                    if (strtolower($as) <> 'as' || !$key) {
+                        continue;
+                    }
+                    $value = $this->getFileContents($ans);
+                    if ($value) {
+                        $this->defines[$key] = $value; // store file contents in "defines" array
+                    }
+                };
                 continue;
             };
 
@@ -408,7 +435,7 @@ class Preprocess_Helper
                     };
                     if (count($exploded) > 2) {
                         $replaceable = trim($exploded[2]);
-                        if ($replaceable == '>>') {    ## multi-line define
+                        if ($replaceable == '<<') {    ## multi-line define
                              $preMultilineVerb = "define";
                              $preMultilineAns = "";
                              $preMultilineArg = $origarg;
@@ -455,10 +482,10 @@ class Preprocess_Helper
                 continue;
             };
 
-            /*****
-            * << *
-            *****/
-            if (trim($line) == '<<' && $preMultilineVerb) { ## end of multi-line command
+            /*********************************
+            * >> (end multi-line statements) *
+            *********************************/
+            if (trim($line) == '>>' && $preMultilineVerb) { ## end of multi-line command
                 if ($preMultilineVerb === 'define') {
                     $this->defines["$preMultilineArg"] = "$preMultilineAns";
                 } elseif ($preMultilineVerb === 'select') {
@@ -621,6 +648,62 @@ class Preprocess_Helper
     }
 
     /**********************************************
+    * function: getFileContents()
+    *------------------
+    * Purpose: get file
+    *------------------
+    * params: <string> filename
+    *------------------
+    * returns: <string> file contents or Boolean FALSE on failure
+    ***********************************************/
+    private function getFileContents($filename) {
+
+        //--validity checking--------
+        if (!$this->verifyFilename($filename)) {
+            return (FALSE);
+        };
+
+        //--get file--------
+        $file = file_get_contents($filename);
+
+        if (!$file) {
+            $this->error_found = TRUE;
+            $this->error_text = $filename . ' error\n';
+            return (FALSE);
+        };
+
+        return ($file);
+    }    
+
+    /**********************************************
+    * function: verifyFilename()
+    *------------------
+    * Purpose: verify file exists
+    *------------------
+    * params: <string> filename
+    *------------------
+    * returns: <Boolena> TRUE if file exists
+    ***********************************************/
+    private function verifyFilename($filename) {
+
+        //--validity checking--------
+        if (!$filename) {
+            $this->error_found = TRUE;
+            $this->error_text .= "filename missing.";
+            return (FALSE);
+        };
+
+        //--file must exist--------
+        if (!file_exists($filename)) {
+            $this->error_found = TRUE;
+            $this->error_text = $filename . ' not found\n';
+            return (FALSE);
+        };
+
+        return (TRUE);
+    }    
+
+    /**********************************************
     * function: selectSingleRow()
     *------------------
     * Purpose: retrieve single row
@@ -631,7 +714,7 @@ class Preprocess_Helper
     ***********************************************/
     private function selectSingleRow($sql) {
         $query = str_replace('select-one', 'select', $sql);
-        $query = str_replace('>>', '', $query); // multi-line sql statements
+        $query = str_replace('<<', '', $query); // multi-line sql statements
         $query = trim($query);
 
         $result = $this->db->query($query); // execute PDO query

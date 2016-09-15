@@ -16,9 +16,9 @@ All lines are pass-thru, unless the first character is a pound sign (#) followed
 ##  <comment>
 
 #define <key> <value>
-#define <key> >>
+#define <key> <<
   <multi-line defines>
-<<
+>>
 
 #eval <key> <expression>
 #extension <.extension>
@@ -30,9 +30,9 @@ All lines are pass-thru, unless the first character is a pound sign (#) followed
 #include <filename>
 
 #mysqlopen <credentials>
-#select >>
+#select <<
   <multi-line sql>
-<<
+>>
   <unlimited lines processed for each selected row>
 #endselect
 ```
