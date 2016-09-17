@@ -15,7 +15,7 @@ class Preprocess_Helper
     * private vars *
     ***************/
     private $version = "1.1.18";  // prelib version displayed on verbose runs
-    private $db; // database connection
+    private $db; // strategy implementation of Database_Interface
     private $defines; // array of #define(s)
     private $extension = '.html'; // default; leading "dot" required
     private $cool; // prettification (coolness) connection
@@ -34,13 +34,16 @@ class Preprocess_Helper
     }
 
     /******************************************
-    * database_connnect
+    * setDatabaseHelper()
+    *----------------------
+    * Use this function to enable database access.
+    *----------------------
+    * params: <Database_Interface> class name
+    *----------------------
+    * returns: null
     ******************************************/
-    private function database_connect () {
-        global $db;
-        if ($db) {
-            $this->db = $db;
-        }
+    public function setDatabaseHelper (Database_Interface $class_name ) {
+        $this->db = $class_name;
     }
 
     /**********************************************
@@ -570,7 +573,12 @@ class Preprocess_Helper
                     $val = $matches[2][$i];
                     $credentials[$key] = $val;
                 }
-                $this->database_connect();
+                if (!isset($this->db)) {
+                    $this->error_found = TRUE;
+                    $this->error_text = "Database option not enabled in pre.config.php";
+                    continue;
+                }
+                //$this->database_connect();
                 $result = $this->db->createConnection($credentials);
                 if (!$result) { // semi-soft error condition; does not cause immediate death
                     $this->error_found = TRUE;

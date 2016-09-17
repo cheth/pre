@@ -1,31 +1,41 @@
 <?php
 /*******************************
 * pre.php
-* (c) Copyright 1997-2016 Cheth Rowe Consulting. All Rights Reserved.
+* (C) Copyright 1997-2016 Cheth Rowe Consulting. All Rights Reserved.
 * developed by: Cheth Rowe Consulting: cheth@cheth.com
 *------------------------------
 * General purpose preprocessor
 *------------------------------
-* 1.1.0 2004-Jun-11 (cheth) initial implementation of php version (was Perl).
-* 1.1.1 2004-Jul-12 (cheth) set Verbose argument in preprocess call
 * 1.2.0 2016-Aug-24 (cheth) preprocessor now a class
 *******************************/
 
 //--find myself-----
 $include_path = dirname(__FILE__) . DIRECTORY_SEPARATOR; // trailing slash
-echo("include_path=$include_path<br />");
+echo("include_path=$include_path");
 
 //--initialize preprocessor class-----
 require_once ($include_path . 'pre.class.php');
 $pre = new Preprocess_Helper;
 
-//--initialize database class-----
+//--define interfaces for optional features-----
 require_once ($include_path . 'pre.db.interface.php');
-require_once ($include_path . 'pre.db.implementation.php');
-require_once ($include_path . 'MySQL_PDO_Model.php');
-$db = new Database_Helper;
+
+//--load user-specified optional features-----
+include_once ($include_path . 'pre.config.php');
+
+//--define interface for optional database class-----
+//require_once ($include_path . 'pre.db.implementation.php');
+//require_once ($include_path . 'MySQL_PDO_Model.php');
+//$db = new Database_Helper;
 
 //--send command line params to preprocessor class---------
 $pre->preprocess($argv, TRUE); // TRUE turns on verbosity
+
+if($pre instanceof Database_Interface) {
+    echo "It is! It is!";
+}
+
+//$array = class_implements($db);
+//print_r($array);
 
 // eof: pre.php

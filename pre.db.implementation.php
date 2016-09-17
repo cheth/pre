@@ -12,7 +12,7 @@ class Database_Helper implements Database_Interface {
     /**
     * Private vars
     */
-    private $db;        // PHP-assigned link for MySQL access
+    private $db;        // link to PDO class
 
     /**
     * Public vars
@@ -53,17 +53,6 @@ class Database_Helper implements Database_Interface {
             $key = strtolower($key);
             $KIC['database'][$key] = $val;
         }
-        //print_r($KIC);
-
-        //--expects database credentials to have been externally defined-------
-        //if(!defined('DB_HOST') 
-        //|| !defined('DB_DATABASE') 
-        //|| !defined('DB_USERNAME') 
-        //|| !defined('DB_PASSWORD') ) {
-        //    $this->error_found = TRUE;
-        //    $this->error_text = 'missing database credentials';
-        //    return (FALSE);
-        //}
 
         //--db charset optional-----------
         if (!isset($KIC['database']['charset'])) {
