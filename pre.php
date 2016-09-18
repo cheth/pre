@@ -6,36 +6,24 @@
 *------------------------------
 * General purpose preprocessor
 *------------------------------
-* 1.2.0 2016-Aug-24 (cheth) preprocessor now a class
+* 1.2.1 2016-Sep-17 (cheth) optional features defined as interfaces and loaded via strategy pattern
 *******************************/
 
 //--find myself-----
 $include_path = dirname(__FILE__) . DIRECTORY_SEPARATOR; // trailing slash
-echo("include_path=$include_path");
 
 //--initialize preprocessor class-----
 require_once ($include_path . 'pre.class.php');
 $pre = new Preprocess_Helper;
 
 //--define interfaces for optional features-----
-require_once ($include_path . 'pre.db.interface.php');
+$pre->requireIfExists($include_path . 'pre.db.interface.php'); // database interface
+$pre->requireIfExists($include_path . 'pre.md.interface.php'); // Markdown interface
 
 //--load user-specified optional features-----
-include_once ($include_path . 'pre.config.php');
-
-//--define interface for optional database class-----
-//require_once ($include_path . 'pre.db.implementation.php');
-//require_once ($include_path . 'MySQL_PDO_Model.php');
-//$db = new Database_Helper;
+$pre->requireIfExists($include_path . 'pre.config.php');
 
 //--send command line params to preprocessor class---------
 $pre->preprocess($argv, TRUE); // TRUE turns on verbosity
-
-if($pre instanceof Database_Interface) {
-    echo "It is! It is!";
-}
-
-//$array = class_implements($db);
-//print_r($array);
 
 // eof: pre.php

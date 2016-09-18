@@ -10,8 +10,8 @@
 *******************************/
 
 //--optional database class-----
-require_once ($include_path . 'pre.db.implementation.php');
-require_once ($include_path . 'MySQL_PDO_Model.php');
-//$pre->setDatabaseHelper(new Database_Helper);
+require_once ($this->include_path . 'pre.db.implementation.php');
+require_once ($this->include_path . 'MySQL_PDO_Model.php');
+$this->setDatabaseHelper(new Database_Helper);
 
 // eof: pre.config.php

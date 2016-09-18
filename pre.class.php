@@ -19,6 +19,7 @@ class Preprocess_Helper
     private $defines; // array of #define(s)
     private $extension = '.html'; // default; leading "dot" required
     private $cool; // prettification (coolness) connection
+    private $include_path; // used by optional configuration file
     
     /***************
     * public vars *
@@ -31,6 +32,9 @@ class Preprocess_Helper
     ******************************************/
     function __construct () {
         date_default_timezone_set('America/Los_Angeles');
+    
+        //--find myself-----
+        $this->include_path = dirname(__FILE__) . DIRECTORY_SEPARATOR; // trailing slash
     }
 
     /******************************************
@@ -708,6 +712,34 @@ class Preprocess_Helper
             return (FALSE);
         };
 
+        return (TRUE);
+    }    
+
+    /**********************************************
+    * function: requireIfExists()
+    *------------------
+    * Purpose: load PHP source file if it exists
+    *------------------
+    * params: <string> filename
+    *------------------
+    * returns: <Boolean> TRUE if successful
+    ***********************************************/
+    public function requireIfExists($filename) {
+        
+        //--validity check---------------
+        if (!$filename || !is_string($filename)) {
+            $this->error_found = TRUE;
+            $this->error_text = "filename expected\n";
+            return FALSE; // error condition
+        }
+
+        //--does file exist?------------------
+        if (!file_exists($filename)) {
+            return FALSE; // neither error nor warning; likely just means a sparse environment
+        }
+
+        //--load file------------------
+        require_once ($filename);
         return (TRUE);
     }    
 
