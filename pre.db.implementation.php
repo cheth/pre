@@ -1,10 +1,11 @@
 <?php
 /**************************
-* private/models/pre.db.interface.php
+* private/models/pre.db.implementation.php
 *--------------------------
-* database handling for KeepItCurrent preprocessor
+* database implementation using MySQL_PDO_Helper class
 *--------------------------
 * 1.0.0 (cheth) 2016-Aug-31 convert to class
+* 1.0.1 (cheth) 2016-Sep-17 minor documentation changes
 **************************/
 
 class Database_Helper implements Database_Interface {
@@ -60,9 +61,7 @@ class Database_Helper implements Database_Interface {
         }
 
         //--initialize database access-----------
-        //echo("trying\n");
         $this->db = new MySQL_PDO_Helper;
-        //echo("tried\n");
 
         //--report success-----------
         return (TRUE);

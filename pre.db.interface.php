@@ -2,7 +2,7 @@
 /**************************
 * private/models/pre.db.interface.php
 *--------------------------
-* database handling for KeepItCurrent preprocessor
+* define database handling interface for "pre" preprocessor
 *--------------------------
 * 1.0.0 (cheth) 2016-Aug-31 convert to class
 **************************/
