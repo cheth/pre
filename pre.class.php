@@ -16,10 +16,11 @@ class Preprocess_Helper
     ***************/
     private $version = "1.1.18";  // prelib version displayed on verbose runs
     private $db; // strategy implementation of Database_Interface
+    private $md; // strategy implementation of Markdown_Interface
     private $defines; // array of #define(s)
     private $extension = '.html'; // default; leading "dot" required
-    private $cool; // prettification (coolness) connection
     private $include_path; // used by optional configuration file
+    private $line_count; // line number of primary file (unaffected by #include)
     
     /***************
     * public vars *
@@ -37,18 +38,61 @@ class Preprocess_Helper
         $this->include_path = dirname(__FILE__) . DIRECTORY_SEPARATOR; // trailing slash
     }
 
-    /******************************************
-    * setDatabaseHelper()
-    *----------------------
-    * Use this function to enable database access.
-    *----------------------
-    * params: <Database_Interface> class name
-    *----------------------
-    * returns: null
-    ******************************************/
-    public function setDatabaseHelper (Database_Interface $class_name ) {
-        $this->db = $class_name;
-    }
+    /**********************************************
+    * function: getFileContents()
+    *------------------
+    * Purpose: get file
+    *------------------
+    * params: <string> filename
+    *------------------
+    * returns: <string> file contents or Boolean FALSE on failure
+    ***********************************************/
+    private function getFileContents($filename) {
+
+        //--validity checking--------
+        if (!$this->verifyFilename($filename)) {
+            return (FALSE);
+        };
+
+        //--get file--------
+        $file = file_get_contents($filename);
+
+        if (!$file) {
+            $this->error_found = TRUE;
+            $this->error_text = $filename . ' error\n';
+            return (FALSE);
+        };
+
+        return ($file);
+    }    
+
+    /**********************************************
+    * function: getRowAsDefines()
+    *------------------
+    * Purpose: retrieve row and add to defines array
+    *------------------
+    * params: none
+    *------------------
+    * returns: <Boolean> TRUE if successful, FALSE if no more rows
+    ***********************************************/
+    private function getRowAsDefines() {
+
+        //--verify database implementation has been defined-----
+        if (!$this->verifyDbImplemented()){
+            return FALSE;
+        }
+
+        //--retrieve row-----
+        $row = $this->db->getRow();
+        if (!$row) { // usually means there are no more rows (could also be error)
+            return (FALSE);
+        }
+
+        foreach($row as $key => $val) {
+            $this->defines[$key] = $val;
+        }
+        return (TRUE);
+    }    
 
     /**********************************************
     * preprocess()
@@ -127,7 +171,7 @@ class Preprocess_Helper
                     chdir($preStartDir);
                 } else {
                     $this->error_found = TRUE;
-                    $this->error_text = "can't open directory: $preStartDir";    
+                    $this->error_text = "can't open directory: $preStartDir\n";    
                 }    
             };
 
@@ -138,7 +182,7 @@ class Preprocess_Helper
                     chdir("$preWilddir");
                 } else {
                     $this->error_found = TRUE;
-                    $this->error_text = "can't open directory: $preWilddir";    
+                    $this->error_text = "can't open directory: $preWilddir\n";    
                 }    
             };
 
@@ -168,7 +212,7 @@ class Preprocess_Helper
                 $this->defines = array();
                 $preOutput_filename = preg_replace("/\.pre/", $this->extension, $preInputFilename);
                 if ($preVerbose) {
-                    echo "\nOutput file name=$preOutput_filename<br>\n";
+                    echo "\nOutput file name=$preOutput_filename\n";
                 };
 
                 //--preprocess file--------------- 
@@ -185,6 +229,10 @@ class Preprocess_Helper
         //--closing process----------------
         if ($preVerbose) {
             $prettyText = '';
+            $prettyVerb = 'processed';
+            if ($this->error_found){
+                $prettyVerb = 'attempted';
+            }
             if ($preCount == 0) {
                 $prettyText = 'Warning: no files';
             } elseif ($preCount == 1) {
@@ -192,7 +240,7 @@ class Preprocess_Helper
             } else {
                 $prettyText = $preCount . ' files';
             }      
-            echo("$prettyText processed.\n");
+            echo("$prettyText $prettyVerb.\n");
         };
 
         if ($preVirtual) {
@@ -201,6 +249,51 @@ class Preprocess_Helper
             return ($preProcessed);  ## list of files preprocessed
         };
 
+    }
+
+    /**********************************************
+    * function: preWriteHTML()
+    *------------------
+    * Purpose: write output file to disk
+    *------------------
+    * params: $xxOutput_filename <string> output filename
+    * params: $preOutput_html <string> preprocessed lines to be written
+    *------------------
+    * returns: <Boolean> TRUE if successful
+    ***********************************************/
+    private function preWriteHTML($preOutput_filename, $preOutput_html) {
+
+        //--validity checking--------
+        if ($preOutput_html == "") {
+            $this->error_found = TRUE;
+            $this->error_text .= "Output html is empty.\n";
+            return (FALSE);
+        };
+
+        //--open/create file for output-----------
+        if (!$preHandle = fopen($preOutput_filename, 'wb')) {
+            $this->error_found = TRUE;
+            $this->error_text .= "Cannot open output file ($preOutput_filename)\n";
+            return (FALSE);
+        }
+
+        //--write file-----------
+        if (!fwrite($preHandle, $preOutput_html, strlen($preOutput_html))) {
+            $strlen = strlen($preOutput_html);
+            $this->error_found = TRUE;
+            $this->error_text .= "Cannot write to file ($preOutput_filename) with handle $preHandle... attempting $strlen bytes\n";
+            return (FALSE);
+        }
+
+        //--close file-----------
+        if (!fclose($preHandle)) {
+            $this->error_found = TRUE;
+            $this->error_text .= "Cannot close output file ($preOutput_filename)\n";
+            return (FALSE);
+        }
+
+        //--all done-----------
+        return (TRUE);
     }
 
     /**********************************************
@@ -217,9 +310,8 @@ class Preprocess_Helper
     ***********************************************/
     function process_file($xxPreFilename, &$preOutput_html, $newFile=TRUE)
     {
-        global $preLineCnt;
-        if ($newFile) {
-            $preLineCnt = 0;
+        if ($newFile) { // not #include
+            $this->line_count = 0;
         };
 
         $prelibBypass = "";
@@ -228,16 +320,15 @@ class Preprocess_Helper
             $xxPreFilename = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, $xxPreFilename);
             if (!file_exists($xxPreFilename)) {
                 $this->error_found = TRUE;
-                $this->error_text .= "Requested input file, \"$xxPreFilename,\" at line $preLineCnt, does not exist.\n";
+                $this->error_text .= "Requested input file, \"$xxPreFilename,\" at line $this->line_count, does not exist.\n";
                 return(FALSE);
             };
         };
 
         ##must be error free before proceeding
-        if ($this->error_found) {
-            echo $this->error_text;
-            return(FALSE);
-        };
+        ##if ($this->error_found) {
+        ##    return(FALSE);
+        ##};
 
         if (!is_array($xxPreFilename)) {
             $preHandle = fopen ($xxPreFilename, "r");
@@ -279,7 +370,6 @@ class Preprocess_Helper
 
             if ($preLoopBlow) {
                 $line = $preLoop[$preLoopIndex];
-                //echo "in preLoopBlow at $preLoopIndex... line=$line...<br>";
                 $preLoopIndex++;
             }
             elseif (is_array($xxPreFilename))
@@ -289,7 +379,9 @@ class Preprocess_Helper
             else
             {
                 $line = fgets($preHandle, 4096);
-                $preLineCnt++;
+                if ($newFile) { // not #include
+                    $this->line_count++;
+                }    
             };
 
             /***************
@@ -365,6 +457,13 @@ class Preprocess_Helper
             * #select *
             **********/
             if ($prefix == "#select"){  ## SELECT
+
+                //--verify database implementation has been defined-----
+                if (!$this->verifyDbImplemented()){
+                    continue;
+                }
+
+                //--parse query-----
                 $argument = trim(substr($line, 7));
                 if ($argument === '<<') {    ## multi-line sql coming
                      $preMultilineVerb = 'select';
@@ -375,7 +474,7 @@ class Preprocess_Helper
                 $query = substr($line,1,strlen($line)-1); // everything except the initial pound sign
                 $query = trim($query);
 
-                $result = $this->db->query($query); // execute PDO query
+                $this->selectMultipleRow($query);
                 $preLoopSuck = true;
                 continue;
             };
@@ -384,6 +483,13 @@ class Preprocess_Helper
             * #select-one *
             **************/
             if ($prefix == "#select-one"){  ## SELECT ONE ROW ONLY
+
+                //--verify database implementation has been defined-----
+                if (!$this->verifyDbImplemented()){
+                    continue;
+                }
+
+                //--parse query-----
                 $argument = trim(substr($line, 11));
                 if ($argument === '<<') {    ## multi-line sql coming
                      $preMultilineVerb = 'select-one';
@@ -395,8 +501,13 @@ class Preprocess_Helper
                 $query = str_replace('select-one', 'select', $query);
                 $query = trim($query);
 
-                $result = $this->db->query($query); // execute PDO query
-                $this->getRowAsDefines(); // load first row
+                //$result = $this->db->query($query); // execute PDO query
+                //if (!$result) {
+                //    $this->error_found = TRUE;
+                //    $this->error_text = "SQL error\n";
+                //    echo("sql error encountered\n");
+                //}
+                $this->selectSingleRow($query); // load first row
                 continue;
             };
 
@@ -463,6 +574,7 @@ class Preprocess_Helper
             * #define *
             **********/
             if ($prefix == "#define" && isset($this->defines) == 0){  ## DEFINE (first time)
+                echo("defines first time\n");
                 $exploded = explode(" ", $line, 3);
                 $ans = "";
                 if (count($exploded) > 1) {
@@ -496,7 +608,7 @@ class Preprocess_Helper
                 if ($preMultilineVerb === 'define') {
                     $this->defines["$preMultilineArg"] = "$preMultilineAns";
                 } elseif ($preMultilineVerb === 'select') {
-                    $result = $this->db->query($preMultilineAns); // execute PDO query
+                    $this->selectMultipleRow($preMultilineAns);
                     $preLoopSuck = true;
                 } elseif ($preMultilineVerb === 'select-one') {
                     $this->selectSingleRow($preMultilineAns);
@@ -569,6 +681,13 @@ class Preprocess_Helper
             * #mysqlopen *
             *************/
             if ($prefix == "#mysqlopen") {  ## MYSQLOPEN
+
+                //--verify database implementation has been defined-----
+                if (!$this->verifyDbImplemented()){
+                    continue;
+                }
+
+                //--parse database connection credentials-----
                 $pattern = '|(.*?)=(.*?)\s|';
                 $count = preg_match_all($pattern, substr($line,11), $matches);
                 $credentials = array();
@@ -577,16 +696,12 @@ class Preprocess_Helper
                     $val = $matches[2][$i];
                     $credentials[$key] = $val;
                 }
-                if (!isset($this->db)) {
-                    $this->error_found = TRUE;
-                    $this->error_text = "Database option not enabled in pre.config.php";
-                    continue;
-                }
-                //$this->database_connect();
+
+                //--create database connection------------
                 $result = $this->db->createConnection($credentials);
                 if (!$result) { // semi-soft error condition; does not cause immediate death
                     $this->error_found = TRUE;
-                    $this->error_text .= "Could not connect to database.";
+                    $this->error_text .= "Could not connect to database.\n";
                 };    
                
                 continue;
@@ -646,9 +761,9 @@ class Preprocess_Helper
         };
 
         //--must be error free before proceeding--------
-        if ($this->error_found) {
+        if ($this->error_found && $newFile) { // only report errors once
             echo $this->error_text;
-            exit;
+            return (FALSE);
         };
 
         //--strip any leading whitespace--------
@@ -658,62 +773,6 @@ class Preprocess_Helper
         return ($preOutput_html);
 
     }
-
-    /**********************************************
-    * function: getFileContents()
-    *------------------
-    * Purpose: get file
-    *------------------
-    * params: <string> filename
-    *------------------
-    * returns: <string> file contents or Boolean FALSE on failure
-    ***********************************************/
-    private function getFileContents($filename) {
-
-        //--validity checking--------
-        if (!$this->verifyFilename($filename)) {
-            return (FALSE);
-        };
-
-        //--get file--------
-        $file = file_get_contents($filename);
-
-        if (!$file) {
-            $this->error_found = TRUE;
-            $this->error_text = $filename . ' error\n';
-            return (FALSE);
-        };
-
-        return ($file);
-    }    
-
-    /**********************************************
-    * function: verifyFilename()
-    *------------------
-    * Purpose: verify file exists
-    *------------------
-    * params: <string> filename
-    *------------------
-    * returns: <Boolena> TRUE if file exists
-    ***********************************************/
-    private function verifyFilename($filename) {
-
-        //--validity checking--------
-        if (!$filename) {
-            $this->error_found = TRUE;
-            $this->error_text .= "filename missing.";
-            return (FALSE);
-        };
-
-        //--file must exist--------
-        if (!file_exists($filename)) {
-            $this->error_found = TRUE;
-            $this->error_text = $filename . ' not found\n';
-            return (FALSE);
-        };
-
-        return (TRUE);
-    }    
 
     /**********************************************
     * function: requireIfExists()
@@ -744,6 +803,29 @@ class Preprocess_Helper
     }    
 
     /**********************************************
+    * function: selectMultipleRow()
+    *------------------
+    * Purpose: execute query that might produce multiple rows
+    *------------------
+    * params: sql
+    *------------------
+    * returns: <Boolean> TRUE if successful
+    ***********************************************/
+    private function selectMultipleRow($sql) {
+        $query = str_replace('select-one', 'select', $sql);
+        $query = str_replace('<<', '', $query); // multi-line sql statements
+        $query = trim($query);
+
+        $result = $this->db->query($query); // execute PDO query
+        if (!$result) {
+            $this->error_found = TRUE;
+            $this->error_text = "SQL error at line $this->line_count\n";
+            return (FALSE);
+        }
+        return (TRUE);
+    }    
+
+    /**********************************************
     * function: selectSingleRow()
     *------------------
     * Purpose: retrieve single row
@@ -758,76 +840,85 @@ class Preprocess_Helper
         $query = trim($query);
 
         $result = $this->db->query($query); // execute PDO query
+        if (!$result) {
+            $this->error_found = TRUE;
+            $this->error_text = "SQL error at line $this->line_count\n";
+            return (FALSE);
+        }
         $this->getRowAsDefines(); // load first row into defines array
         return (TRUE);
     }    
 
+    /******************************************
+    * setDatabaseHelper()
+    *----------------------
+    * Use this function to enable database access.
+    *----------------------
+    * params: <Database_Interface> class name
+    *----------------------
+    * returns: null
+    ******************************************/
+    public function setDatabaseHelper (Database_Interface $class_name ) {
+        $this->db = $class_name;
+    }
+
+    /******************************************
+    * setMarkdownHelper()
+    *----------------------
+    * Use this function to enable markdown access.
+    *----------------------
+    * params: <Markdown_Interface> class name
+    *----------------------
+    * returns: null
+    ******************************************/
+    public function setMarkdownHelper (Markdown_Interface $class_name ) {
+        $this->md = $class_name;
+    }
+
     /**********************************************
-    * function: getRowAsDefines()
+    * function: verifyDbImplemented()
     *------------------
-    * Purpose: retrieve row and add to defines array
+    * Purpose: verify that database implementation has been defined
     *------------------
     * params: none
     *------------------
-    * returns: <Boolean> TRUE if successful, FALSE if no more rows
+    * returns: <Boolean> TRUE if database connection established
     ***********************************************/
-    private function getRowAsDefines() {
-        $row = $this->db->getRow();
-        if (!$row) { // usually means there are no more rows (could also be error)
-            return (FALSE);
+    private function verifyDbImplemented() {
+        if (!$this->db) {
+            $this->error_found = TRUE;
+            $this->error_text = "Database option not enabled in pre.config.php\n";
+            return FALSE;
         }
-
-        foreach($row as $key => $val) {
-            $this->defines[$key] = $val;
-        }
-        return (TRUE);
+        return TRUE;
     }    
 
     /**********************************************
-    * function: preWriteHTML()
+    * function: verifyFilename()
     *------------------
-    * Purpose: write output file to disk
+    * Purpose: verify file exists
     *------------------
-    * params: $xxOutput_filename <string> output filename
-    * params: $preOutput_html <string> preprocessed lines to be written
+    * params: <string> filename
     *------------------
-    * returns: <Boolean> TRUE if successful
+    * returns: <Boolena> TRUE if file exists
     ***********************************************/
-    private function preWriteHTML($preOutput_filename, $preOutput_html) {
+    private function verifyFilename($filename) {
 
         //--validity checking--------
-        if ($preOutput_html == "") {
+        if (!$filename) {
             $this->error_found = TRUE;
-            $this->error_text .= "Output html is empty.";
+            $this->error_text = "filename missing\n";
             return (FALSE);
         };
 
-        //--open/create file for output-----------
-        if (!$preHandle = fopen($preOutput_filename, 'wb')) {
+        //--file must exist--------
+        if (!file_exists($filename)) {
             $this->error_found = TRUE;
-            $this->error_text .= "Cannot open output file ($preOutput_filename)";
+            $this->error_text = $filename . ' not found\n';
             return (FALSE);
-        }
+        };
 
-        //--write file-----------
-        if (!fwrite($preHandle, $preOutput_html, strlen($preOutput_html))) {
-            $strlen = strlen($preOutput_html);
-            $this->error_found = TRUE;
-            $this->error_text .= "Cannot write to file ($preOutput_filename) with handle $preHandle... attempting $strlen bytes";
-            return (FALSE);
-        }
-
-        //--close file-----------
-        if (!fclose($preHandle)) {
-            $this->error_found = TRUE;
-            $this->error_text .= "Cannot close output file ($preOutput_filename)";
-            return (FALSE);
-        }
-
-        //--all done-----------
         return (TRUE);
-    }
+    }    
 
 }
-
-

@@ -61,7 +61,14 @@ class Database_Helper implements Database_Interface {
         }
 
         //--initialize database access-----------
-        $this->db = new MySQL_PDO_Helper;
+        try {
+            $this->db = new MySQL_PDO_Helper;
+        } catch (Exception $e) {
+            $this->error_found = TRUE;
+            $this->error_text = $e;
+            return FALSE;
+        }    
+    
 
         //--report success-----------
         return (TRUE);
@@ -86,7 +93,13 @@ class Database_Helper implements Database_Interface {
         //--prepare PDO----------
 
         //--execute query----------
-        $result = $this->db->query($sql);
+        try {
+            $result = $this->db->query($sql);
+        } catch (Exception $e) {
+            $this->error_found = TRUE;
+            $this->error_text = $e;
+            return FALSE;
+        }    
 
         //--resturn requested row----------
         return ($result);
