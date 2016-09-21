@@ -511,6 +511,15 @@ class Preprocess_Helper
                 continue;
             };
 
+            /************
+            * #markdown *
+            ************/
+            if ($prefix == "#markdown"){  ## MARKDOWN
+                $html = $this->markdownText(substr($line,9));
+                $preOutput_html .= $html . "\n";
+                continue;
+            };
+
             /***********
             * #include *
             ***********/
@@ -891,6 +900,25 @@ class Preprocess_Helper
             return FALSE;
         }
         return TRUE;
+    }    
+
+    /**********************************************
+    * function: markdownText()
+    *------------------
+    * Purpose: expand markdown text to html
+    *------------------
+    * params: <string> text
+    *------------------
+    * returns: <string> html or FALSE on error
+    ***********************************************/
+    private function markdownText($text) {
+        if (!$this->md) {
+            $this->error_found = TRUE;
+            $this->error_text = "Markdown option not enabled in pre.config.php\n";
+            return FALSE;
+        }
+        $html = $this->md->formatText($text); 
+        return $html;
     }    
 
     /**********************************************
