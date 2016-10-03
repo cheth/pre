@@ -1,0 +1,48 @@
+#########################
+## example/defines.pre ##
+##---------------------##
+## Some examples.      ##
+#########################
+
+##-----------------------------------------------------------------
+## single line define
+##-----------------------------------------------------------------
+#define LOLLIPOP round, hard candy affixed to a stick
+
+##-----------------------------------------------------------------
+## multi-line define
+##-----------------------------------------------------------------
+#define REALLY_BIG <<
+This is an example of a multi-line defines.
+It uses a doubled left angle bracket to indicate that a multi-line argument begins.
+The multi-line argument ends when a doubled right angle bracket is encountered.
+>>
+
+##-----------------------------------------------------------------
+## This is a comment. (Because the line starts with two pound signs.)
+##-----------------------------------------------------------------
+
+##-----------------------------------------------------------------
+## Uppercasing defines may be helpful, but is not required.
+##-----------------------------------------------------------------
+#define case_sensitive able to distinguish between upper and lower case
+
+##-----------------------------------------------------------------
+## Leading (and trailing) whitespace is removed from the output.
+## Everything so far is just comment or define, so will not bloat ouput.
+##-----------------------------------------------------------------
+
+<h1>Groovy page</h1>
+<h2>A lollipop is a LOLLIPOP</h2>
+<p>REALLY_BIG</p>
+<p>Some paragraphs are bigger than "REALLY_BIG"</p>
+<p>
+CASE_SENSITIVE: defines are case_sensitive.
+</p>
+
+##-----------------------------------------------------------------
+## Redefining defines
+##-----------------------------------------------------------------
+#define LOLLIPOP possible corruption of the Romany term for a candy apple on a stick, <i>loli phaba</i>
+
+<h2>A lollipop is a LOLLIPOP</h2>
