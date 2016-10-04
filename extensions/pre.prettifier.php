@@ -1,7 +1,7 @@
 <?php
 /****************************************
 * filename: pre.prettifier.php
-* purpose:  Class for applying prettifications to text
+* purpose:  Class for applying prettifications to text (Markdown-ignorant)
 ****************************************
 * 1.0.0 (cheth) 2016-May-10 initial implementation
 * 1.1.0 (cheth) 2016-Sep-12 migrate to pre

@@ -6,7 +6,7 @@
 *------------------------------
 * configuration file for the preprocessor pre
 *------------------------------
-* 1.0.0 2016-Sep-17 (cheth) initial implementation
+* 1.0.1 2016-Oct-04 (cheth) move to extensions directory
 *******************************/
 
 //--define interfaces for optional features-----
