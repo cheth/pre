@@ -388,7 +388,7 @@ class Preprocess_Helper
             * ## (comment) *
             ***************/
             //--double pound sign (##) for source comments--------------
-            if (substr($line,0,2) == "##") {  ## COMMENT
+            if (substr($line,0,2) == "##" && !$preMultilineVerb) {  ## COMMENT
                 continue;
             };
 
@@ -614,8 +614,9 @@ class Preprocess_Helper
             * >> (end multi-line statements) *
             *********************************/
             if (trim($line) == '>>' && $preMultilineVerb) { ## end of multi-line command
+                $preMultilineAns = trim($preMultilineAns);
                 if ($preMultilineVerb === 'define') {
-                    $this->defines["$preMultilineArg"] = "$preMultilineAns";
+                    $this->defines["$preMultilineArg"] = $preMultilineAns;
                 } elseif ($preMultilineVerb === 'select') {
                     $this->selectMultipleRow($preMultilineAns);
                     $preLoopSuck = true;
