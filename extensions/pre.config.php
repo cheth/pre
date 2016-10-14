@@ -19,7 +19,7 @@ $pre->requireIfExists($extensions_path . 'MySQL_PDO_Model.php'); // PDO helper
 $pre->setDatabaseHelper(new Database_Helper);
 
 //--optional Markdown class-----
-$pre->requireIfExists($extensions_path . 'pre.prettifier.php');
+$pre->requireIfExists($extensions_path . 'pre.prettifierTEST.php');
 $pre->setMarkdownHelper(new Prettification_Helper);
 
 // eof: pre.config.php

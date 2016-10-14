@@ -16,12 +16,12 @@ $include_path = dirname(__FILE__) . DIRECTORY_SEPARATOR; // trailing slash
 require_once ($include_path . 'pre.class.php');
 $pre = new Preprocess_Helper;
 
-//--define interfaces for optional features-----
-$pre->requireIfExists($include_path . 'pre.db.interface.php'); // database interface
-$pre->requireIfExists($include_path . 'pre.md.interface.php'); // Markdown interface
-
-//--load user-specified optional features-----
-$pre->requireIfExists($include_path . 'pre.config.php');
+//--OPTIONAL: load user-specified optional features-----
+$extensions_path = $include_path . 'extensions' . DIRECTORY_SEPARATOR; // trailing slash
+$extensions_config = $extensions_path . 'pre.config.php';
+if (file_exists($extensions_config)) {
+    include_once($extensions_config);
+}    
 
 //--send command line params to preprocessor class---------
 $pre->preprocess($argv, TRUE); // TRUE turns on verbosity
