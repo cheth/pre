@@ -1,0 +1,42 @@
+############################
+## pre/examples/mysql.pre ##
+############################
+#mysqlopen DB_HOSTNAME=localhost DB_DATABASE=pre_example DB_USERNAME=pre_user DB_PASSWORD=example
+
+<h1>MySQL Examples</h1>
+
+##################################################
+## select one row from pre_global table
+## set #defines for PRE_URL and PRE_DESCRIPTION
+##################################################
+#select-one <<
+    pre_url AS PRE_URL,
+    pre_description AS PRE_DESCRIPTION
+FROM
+    pre_global 
+WHERE
+    id = 1
+>>
+
+<h3>More <a href="PRE_URL">PRE_DESCRIPTION</a> fun!</h3>
+
+
+<ul>
+##################################################
+## loop through all pre_user records
+## set #defines for USER_NAME and USER_INSTRUMENT
+##################################################
+#select <<
+    CONCAT(first_name, ' ', last_name) AS USER_NAME,
+    instrument AS USER_INSTRUMENT
+FROM
+    pre_user
+ORDER BY
+    id
+>>
+    <li>Featuring USER_NAME on USER_INSTRUMENT</li>
+#endselect
+</ul>
+
+
+<p>Pre's all over town.</p>
