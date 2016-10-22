@@ -1,0 +1,42 @@
+##########################
+## example/markdown.pre ##
+##########################
+
+#####################################################################
+## Text to run through markdown follows.                           ##
+## (Markdown is more often applied to text from a database query.) ##
+#####################################################################
+#define THE_MARKDOWN_SOURCE <<
+# This is an h1 tag
+## This is an h2 tab
+This is a paragraph "with matching typographic quotemarks."
+Newlines, when not separated by blank lines, are part of the preceding 
+paragraph.
+
+{ .groovy } Groovy class applied to this contraction-containing par'graph of links and images.
+[the real link](www.yahoo.com){class: .groovy}
+![the real image](/pix/image.png){caption: My caption.}{.frenimage}
+
+
+[the real blink](www.yahoo.com) This link also contains paragraph text.
+
+
+
+This is another paragraph. The first separating blank line makes it a new paragraph.
+Extra blank lines--above and below--are ignored.
+Doubled dashes are converted to the typographic emdash--, unless preceded by a backslash\--.
+
+
+
++ item one
++ item two
++ item for ever
+
+This paragraph is the last line; but it's still a paragraph!
+>>
+
+###############################
+## Apply markdown filter.    ##
+###############################
+#markdown THE_MARKDOWN_SOURCE
+
