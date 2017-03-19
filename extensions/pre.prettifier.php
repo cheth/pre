@@ -18,9 +18,11 @@ class Prettification_Helper implements Markdown_Interface {
     private $verbs;
     private $pre_verb = '```';
     private $div_verb = '~~~';
+    private $lyric_verb = '@@@';
     private $is_pre = FALSE;
     private $is_div = FALSE;
     private $is_ul = FALSE;
+    private $is_lyric = FALSE; // observe carriage return
     private $previous_line = '';
     private $previous_character = '';
     private $current_character = '';
@@ -37,6 +39,7 @@ class Prettification_Helper implements Markdown_Interface {
        ,'('   // start url portion of link/image
        ,')'   // end url portion of link/image
        ,'!'   // exclamation point in column 1 identifies image
+       ,'@'   // at sign starts/stops markdown extension: lyric support
     );
 
     private $formatted_text; // output html
@@ -60,6 +63,7 @@ class Prettification_Helper implements Markdown_Interface {
         $this->verbs[] = (object) array('verb' => "~", 'column1' => TRUE, 'triple' => TRUE, 'pair' => TRUE, 'tag' => 'pre');
         $this->verbs[] = (object) array('verb' => "![", 'column1' => TRUE);
         $this->verbs[] = (object) array('verb' => "[", 'column1' => TRUE, 'helper' => 'helper_href');
+        $this->verbs[] = (object) array('verb' => "@", 'column1' => TRUE);
     }
 
     /**********************************************
@@ -88,7 +92,6 @@ class Prettification_Helper implements Markdown_Interface {
     * returns: formatted text or FALSE on failure
     ***********************************************/
     public function formatText ($text) {
-        //echo("text=$text\n");
         if (!is_string($text)) {
             $this->error_found = TRUE;
             $this->error_text = 'requires string';
@@ -122,6 +125,8 @@ class Prettification_Helper implements Markdown_Interface {
 
             //--main loop---------
             if ($this->current_character === "\n") {
+
+                //--handle "pre"-------------------- 
                 if ($this->is_pre) {
                     $this->addToOutput($this->previous_line);
                     $this->previous_line = '';
@@ -135,6 +140,23 @@ class Prettification_Helper implements Markdown_Interface {
                     $this->openPre();
                     continue;
                 }
+
+                //--handle "lyric" (observe carriage returns)-------------------- 
+                if ($this->is_lyric && substr($this->previous_line,1,3) === $this->lyric_verb) {
+                    $this->closeLyric();
+                    continue;
+                }
+                if ($this->is_lyric) {
+                    $this->addToOutput($this->previous_line . '<br />');
+                    $this->previous_line = '';
+                    continue;
+                }
+                if (substr($this->previous_line,0,3) === $this->lyric_verb) {
+                    $this->openLyric();
+                    continue;
+                }
+
+                //--handle "div"-------------------- 
                 if ($this->is_div && substr($this->previous_line,0,3) === $this->div_verb) {
                     $this->closeDiv();
                     $this->previous_line = '';
@@ -199,15 +221,47 @@ class Prettification_Helper implements Markdown_Interface {
     ***********************************************/
     private function addToOutput ($line) {
 
-        //--sanitization-------
-        $line = trim($line);
+        //--blank monospaced lines---------
+        if ($this->is_pre && substr($line,0,1) === "\n") {
+            //$loc = strpos($line,'~~~');
+            //echo("bizarro loc=$loc\n");
+            //$line = str_replace("\n","<code>\n</code>",$line); // multiple lines fed here at once
+            $this->formatted_text .= "<code></code>\n";
+        }    
         
-        //--error checking-------- 
-        if ($this->is_pre) {
-            $this->formatted_text .= "<code>$line</code>\n";
+        /****************
+        * ordinary line *
+        ****************/
+        $line = trim($line);
+
+        /***************************
+        * monospaced code sections *
+        ***************************/
+        //--end monospaced code section---------
+        if ($this->is_pre && substr($line,0,3) === '~~~') {
+            $this->formatted_text .= "</pre>\n";
+            $this->is_pre = FALSE;
             return TRUE;
+        }    
+
+        //--expand monospaced code section---------
+        if (substr($line,0,3) === '~~~') {
+            $this->is_pre = TRUE;
+            $line = trim(substr($line,3)); // bypass initial ~~~
+            //$line = substr($line,3); // bypass initial ~~~
+            $this->formatted_text .= "<pre>\n";
+            $line = str_replace("\n","</code>\n<code>",$line); // multiple lines fed here at once
+            $this->formatted_text .= "<code>$line</code>\n";
+            if (substr($line,-3) === '~~~') { // sometimes no blank line before ending triple tildes
+                $this->formatted_text .= "</pre>\n";
+                $this->is_pre = FALSE;
+            } 
+            return TRUE; 
         }
 
+        /******************
+        * unordered lists *
+        ******************/
         //--end li items (+ in column 1)---------
         if ($this->is_ul && substr($line,0,1) !== '+') {
             $this->formatted_text .= "</ul>\n";
@@ -226,7 +280,9 @@ class Prettification_Helper implements Markdown_Interface {
             return TRUE; 
         }
 
-        //--headings-------------
+        /***********
+        * headings *
+        ***********/
         $pattern = '|^(#+) (.*)|';
         preg_match($pattern, $line, $matches);
 
@@ -255,7 +311,9 @@ class Prettification_Helper implements Markdown_Interface {
 
         //--fancy quotes--------
         $pattern = '|(?<!\\\\)"(.*?)(?<!\\\\)"|';
-        $line = preg_replace($pattern,"&ldquo;$1&rdquo;",$line);
+        if (strpos($line, 'class="')===FALSE) { // don't injure class names
+            $line = preg_replace($pattern,"&ldquo;$1&rdquo;",$line);
+        }    
 
         //--emdash--------
         $pattern = '|(?<!\\\\)(--)|';
@@ -273,7 +331,11 @@ class Prettification_Helper implements Markdown_Interface {
         }
 
         //--send output---------
-        $this->formatted_text .= "<p class=\"$class\">$line</p>\n";
+        if ($this->is_lyric) {
+            $this->formatted_text .= "$line\n";
+        } else {
+            $this->formatted_text .= "<p class=\"$class\">$line</p>\n";
+        }    
         return TRUE;
     }
 
@@ -433,6 +495,36 @@ class Prettification_Helper implements Markdown_Interface {
     }    
 
     /**********************************************
+    * closeDiv()
+    *------------------
+    * Purpose: end div tag
+    *------------------
+    * params: none
+    *------------------
+    * returns: NULL
+    ***********************************************/
+    private function closeDiv () {
+        $this->previous_line = '';
+        $this->is_pre = FALSE;
+        $this->addToOutput("</div>\n");
+    }    
+
+    /**********************************************
+    * openDiv()
+    *------------------
+    * Purpose: open div tag
+    *------------------
+    * params: none
+    *------------------
+    * returns: NULL
+    ***********************************************/
+    private function openDiv () {
+        $this->previous_line = '';
+        $this->addToOutput("<div>\n");
+        $this->is_pre = TRUE;
+    }    
+
+    /**********************************************
     * closePre()
     *------------------
     * Purpose: end pre tag
@@ -460,6 +552,36 @@ class Prettification_Helper implements Markdown_Interface {
         $this->previous_line = '';
         $this->addToOutput("<pre>\n");
         $this->is_pre = TRUE;
+    }    
+
+    /**********************************************
+    * closeLyric()
+    *------------------
+    * Purpose: end lyric section
+    *------------------
+    * params: none
+    *------------------
+    * returns: NULL
+    ***********************************************/
+    private function closeLyric () {
+        $this->previous_line = '';
+        $this->formatted_text .= "</div>\n";
+        $this->is_lyric = FALSE;
+    }    
+
+    /**********************************************
+    * openLyric()
+    *------------------
+    * Purpose: open lyric section
+    *------------------
+    * params: none
+    *------------------
+    * returns: NULL
+    ***********************************************/
+    private function openLyric () {
+        $this->is_lyric = TRUE;
+        $this->previous_line = '';
+        $this->addToOutput("<div class=\"lyric\">\n");
     }    
 
     /**********************************************
