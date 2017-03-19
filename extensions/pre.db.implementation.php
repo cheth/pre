@@ -47,22 +47,9 @@ class Database_Helper implements Database_Interface {
             return (FALSE);
         }
 
-        //--convert credentials to KIC namespace-----------
-        global $KIC;
-        if($credentials) foreach($credentials as $key => $val) {
-            $key = str_replace('DB_','',$key);
-            $key = strtolower($key);
-            $KIC['database'][$key] = $val;
-        }
-
-        //--db charset optional-----------
-        if (!isset($KIC['database']['charset'])) {
-            $KIC['database']['charset'] = 'utf8';
-        }
-
         //--initialize database access-----------
         try {
-            $this->db = new MySQL_PDO_Helper;
+            $this->db = new MySQL_PDO_Helper($credentials);
         } catch (Exception $e) {
             $this->error_found = TRUE;
             $this->error_text = $e;

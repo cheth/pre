@@ -827,9 +827,9 @@ class Preprocess_Helper
         $query = trim($query);
 
         $result = $this->db->query($query); // execute PDO query
-        if (!$result) {
+        if ($this->db->error_found) {
             $this->error_found = TRUE;
-            $this->error_text = "SQL error at line $this->line_count\n";
+            $this->error_text = "SQL error at line $this->line_count. " . $this->db->error_text . "\n";
             return (FALSE);
         }
         return (TRUE);
@@ -850,9 +850,9 @@ class Preprocess_Helper
         $query = trim($query);
 
         $result = $this->db->query($query); // execute PDO query
-        if (!$result) {
+        if ($this->db->error_found) {
             $this->error_found = TRUE;
-            $this->error_text = "SQL error at line $this->line_count\n";
+            $this->error_text = "SQL error at line $this->line_count. " . $this->db->error_text . "\n";
             return (FALSE);
         }
         $this->getRowAsDefines(); // load first row into defines array
