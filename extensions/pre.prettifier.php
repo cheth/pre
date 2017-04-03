@@ -5,6 +5,7 @@
 ****************************************
 * 1.0.0 (cheth) 2016-May-10 initial implementation
 * 1.1.0 (cheth) 2016-Sep-12 migrate to pre
+* 1.1.1 (cheth) 2017-Apr-01 initialize (forgot the this->) text on each new call.
 ****************************************/
 
 class Prettification_Helper implements Markdown_Interface {
@@ -98,7 +99,7 @@ class Prettification_Helper implements Markdown_Interface {
             return (FALSE);
         };
 
-        $formatted_text = '';
+        $this->formatted_text = '';
         $is_sub_heading = FALSE;
         $is_pre_heading = FALSE;
         $is_raw_html = FALSE;
