@@ -209,6 +209,7 @@ class Preprocess_Helper
                 if (!fnmatch ($preWildcard, $preInputFilename) ) {
                     continue;
                 }
+                unset($this->defines);
                 $this->defines = array();
                 $preOutput_filename = preg_replace("/\.pre/", $this->extension, $preInputFilename);
                 if ($preVerbose) {

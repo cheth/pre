@@ -6,6 +6,7 @@
 * 1.0.0 (cheth) 2016-May-10 initial implementation
 * 1.1.0 (cheth) 2016-Sep-12 migrate to pre
 * 1.1.1 (cheth) 2017-Apr-01 initialize (forgot the this->) text on each new call.
+* 1.1.2 (cheth) 2017-May-06 verb checking uses trimmed substring for success on repeated calls.
 ****************************************/
 
 class Prettification_Helper implements Markdown_Interface {
@@ -109,11 +110,13 @@ class Prettification_Helper implements Markdown_Interface {
         $is_pull_quote = FALSE;
         $is_quoting = FALSE;
         $is_header = FALSE; // within text of header
+        $is_lyric = FALSE;
         $h_counter = 0; // h1 to h6
         $backtick_counter = 0; // ``` starts code block; ``` ends code block
         $was_em_dash = FALSE; // was not is, because just sent
         $current_character = '';
         $previous_character = '';
+        $previous_line = '';
 
         $text = trim($text);
         $line_trained_text = str_replace("\r\n", "\n", $text);
@@ -133,17 +136,17 @@ class Prettification_Helper implements Markdown_Interface {
                     $this->previous_line = '';
                     continue;
                 }
-                if ($this->is_pre && substr($this->previous_line,0,3) === $this->pre_verb) {
+                if ($this->is_pre && substr(trim($this->previous_line),0,3) === $this->pre_verb) {
                     $this->closePre();
                     continue;
                 }
-                if (substr($this->previous_line,0,3) === $this->pre_verb) {
+                if (substr(trim($this->previous_line),0,3) === $this->pre_verb) {
                     $this->openPre();
                     continue;
                 }
 
                 //--handle "lyric" (observe carriage returns)-------------------- 
-                if ($this->is_lyric && substr($this->previous_line,1,3) === $this->lyric_verb) {
+                if ($this->is_lyric && substr(trim($this->previous_line),0,3) === $this->lyric_verb) {
                     $this->closeLyric();
                     continue;
                 }
@@ -152,19 +155,19 @@ class Prettification_Helper implements Markdown_Interface {
                     $this->previous_line = '';
                     continue;
                 }
-                if (substr($this->previous_line,0,3) === $this->lyric_verb) {
+                if (substr(trim($this->previous_line),0,3) === $this->lyric_verb) {
                     $this->openLyric();
                     continue;
                 }
 
                 //--handle "div"-------------------- 
-                if ($this->is_div && substr($this->previous_line,0,3) === $this->div_verb) {
+                if ($this->is_div && substr(trim($this->previous_line),0,3) === $this->div_verb) {
                     $this->closeDiv();
                     $this->previous_line = '';
                     $this->is_div = FALSE;
                     continue;
                 }
-                if (substr($this->previous_line,0,3) === $this->div_verb) {
+                if (substr(trim($this->previous_line),0,3) === $this->div_verb) {
                     $this->openDiv();
                     $this->previous_line = '';
                     $this->is_div = TRUE;
@@ -175,7 +178,7 @@ class Prettification_Helper implements Markdown_Interface {
                 //    $this->addToOutput($remainder);
                 //    continue;
                 //}
-                if (substr($this->previous_line,0,1) === '#') {
+                if (substr(trim($this->previous_line),0,1) === '#') {
                     $this->addToOutput($this->previous_line);
                     $this->previous_line = '';
                     $this->current_character = ''; // headings only take one line
